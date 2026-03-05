@@ -1,0 +1,11 @@
+export const ImportErrorCode = {
+  PARSE_ERROR: 'PARSE_ERROR',
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
+  DUPLICATE_NATURAL_KEY: 'DUPLICATE_NATURAL_KEY',
+  DUPLICATE_ID: 'DUPLICATE_ID',
+  ID_NATURAL_KEY_MISMATCH: 'ID_NATURAL_KEY_MISMATCH',
+  FK_ERROR: 'FK_ERROR',
+  SLUG_CONFLICT: 'SLUG_CONFLICT',
+} as const;
+
+export type ImportErrorCode = typeof ImportErrorCode[keyof typeof ImportErrorCode];

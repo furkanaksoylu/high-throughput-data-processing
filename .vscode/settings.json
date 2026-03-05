@@ -1,0 +1,20 @@
+{
+    "sqltools.connections": [
+        {
+            "ssh": "Enabled",
+            "previewLimit": 50,
+            "server": "152.53.227.94",
+            "port": 28854,
+            "sshOptions": {
+                "port": 22,
+                "host": "152.53.116.41",
+                "username": "root",
+                "password": "UFdLLWdHoCys8PU"
+            },
+            "driver": "PostgreSQL",
+            "database": "main_db",
+            "name": "Folemik Production",
+            "username": "main_user"
+        }
+    ]
+}

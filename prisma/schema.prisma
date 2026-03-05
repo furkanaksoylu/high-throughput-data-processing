@@ -1,0 +1,163 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model AuthUser {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email        String   @unique
+  name         String
+  passwordHash String   @map("password_hash")
+  role         String   @default("author")
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("auth_users")
+}
+
+model BulkJob {
+  id         String    @id @db.Uuid
+  type       String
+  entity     String
+  format     String
+  status     String
+  inputPath  String?   @map("input_path")
+  outputPath String?   @map("output_path")
+  params     Json?
+  gzip       Boolean   @default(false)
+  totals     Json      @default("{\"read\":0,\"valid\":0,\"failed\":0,\"written\":0}")
+  lastError  String?   @map("last_error")
+  createdBy  String?   @map("created_by") @db.Uuid
+  startedAt  DateTime? @map("started_at") @db.Timestamptz(6)
+  finishedAt DateTime? @map("finished_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  errors BulkJobError[]
+
+  @@index([createdBy], map: "idx_bulk_jobs_created_by")
+  @@index([type, status], map: "idx_bulk_jobs_type_status")
+  @@map("bulk_jobs")
+}
+
+model ImportIdempotency {
+  key         String
+  createdBy   String   @map("created_by") @db.Uuid
+  jobId       String   @map("job_id") @db.Uuid
+  entity      String?
+  format      String?
+  requestHash String?  @map("request_hash")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@id([key, createdBy])
+  @@unique([key, createdBy], map: "idx_import_idempotency_key_user")
+  @@map("import_idempotency")
+}
+
+model BulkJobError {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  jobId      String   @map("job_id") @db.Uuid
+  line       Int?
+  externalId String?  @map("external_id")
+  code       String
+  errors     Json?
+  raw        Json?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  job BulkJob @relation(fields: [jobId], references: [id])
+
+  @@index([jobId, createdAt], map: "idx_bulk_job_errors_job_id_created")
+  @@map("bulk_job_errors")
+}
+
+model User {
+  id         BigInt   @id @default(autoincrement())
+  externalId String   @unique @map("external_id")
+  email      String   @unique
+  name       String
+  role       String   @default("user")
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  articles Article[]
+  comments Comment[]
+
+  @@map("users")
+}
+
+model Article {
+  id               BigInt    @id @default(autoincrement())
+  externalId       String    @unique @map("external_id")
+  slug             String?   @unique
+  authorExternalId String    @map("author_external_id")
+  title            String
+  body             String
+  tags             Json      @default("[]")
+  publishedAt      DateTime? @map("published_at") @db.Timestamptz(6)
+  status           String    @default("draft")
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  author   User      @relation(fields: [authorExternalId], references: [externalId], onUpdate: Cascade, onDelete: Restrict)
+  comments Comment[]
+
+  @@index([authorExternalId], map: "idx_articles_author_external_id")
+  @@map("articles")
+}
+
+model Comment {
+  id                BigInt   @id @default(autoincrement())
+  externalId        String   @unique @map("external_id")
+  articleExternalId String   @map("article_external_id")
+  userExternalId    String   @map("user_external_id")
+  body              String
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  article Article @relation(fields: [articleExternalId], references: [externalId], onUpdate: Cascade, onDelete: Restrict)
+  user    User    @relation(fields: [userExternalId], references: [externalId], onUpdate: Cascade, onDelete: Restrict)
+
+  @@index([articleExternalId], map: "idx_comments_article_external_id")
+  @@index([userExternalId], map: "idx_comments_user_external_id")
+  @@map("comments")
+}
+
+model StgUser {
+  jobId      String @map("job_id") @db.Uuid
+  line       Int
+  externalId String @map("external_id")
+  payload    Json
+
+  @@id([jobId, line])
+  @@index([jobId], map: "idx_stg_users_job_id")
+  @@index([jobId, externalId], map: "idx_stg_users_job_external_id")
+  @@map("stg_users")
+}
+
+model StgArticle {
+  jobId      String @map("job_id") @db.Uuid
+  line       Int
+  externalId String @map("external_id")
+  payload    Json
+
+  @@id([jobId, line])
+  @@index([jobId], map: "idx_stg_articles_job_id")
+  @@index([jobId, externalId], map: "idx_stg_articles_job_external_id")
+  @@map("stg_articles")
+}
+
+model StgComment {
+  jobId      String @map("job_id") @db.Uuid
+  line       Int
+  externalId String @map("external_id")
+  payload    Json
+
+  @@id([jobId, line])
+  @@index([jobId], map: "idx_stg_comments_job_id")
+  @@index([jobId, externalId], map: "idx_stg_comments_job_external_id")
+  @@map("stg_comments")
+}
